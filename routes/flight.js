@@ -1,7 +1,10 @@
 const express = require('express');
 const Flight = require('../models/Flight');
+const { default: mongoose } = require('mongoose');
+const User = require('../models/User');
 const router = express.Router();
 const authenticateToken = require('./auth').authenticateToken;
+const authenticateAdmin = require('./auth').authenticateAdmin;
 
 router.post('/', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
@@ -50,12 +53,51 @@ router.get('/search', async (req, res) => {
     }
 });
 
+router.post('/adminsearch', authenticateAdmin, async (req, res) => {
+    try {
+        const { flightdata } = req.body;
+        console.log(new Date(flightdata));
+        const query = {
+            $or: [
+                { flightId: flightdata },
+                { flightName: flightdata },
+                {
+                    date: new Date(flightdata)
+                }
+            ]
+        };
+        const flights = await Flight.find(query).select('-__v -_id');
+        res.status(200).json({ flights });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 router.get('/', async (req, res) => {
     try {
         const flights = await Flight.find().select('-__v -_id');
         res.status(200).json({ flights });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/bookings', authenticateAdmin, async (req, res) => {
+    try {
+        const { flightId } = req.body;
+        const f = await Flight.find({ flightId: flightId });
+        const bookedusers = f[0].bookedUsers;
+        const users = await Promise.all(
+            bookedusers.map((id, i) =>
+                User.findOne({ _id: id })
+                    .select('name email')
+                    .then(user => ({ seat: i + 1, name: user.name, email: user.email }))
+            )
+        );
+        res.status(200).json({ users });
+    } catch (error) {
+        res.status(500).json({ error: "Error" });
     }
 });
 

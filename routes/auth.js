@@ -38,7 +38,20 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Middleware
+router.get('/admincheck', authenticateToken, async (req, res) => {
+    const token = req.headers['authorization'];
+    if (!token) {
+        return res.status(401).json({ error: 'Token not provided' });
+    }
+    jwt.verify(token, "gokul", (err, user) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid token' });
+        }
+        return res.status(200).json({ role: user.role });
+    });
+});
+
+// Middlewares
 function authenticateToken(req, res, next) {
     const token = req.headers['authorization'];
     if (!token) {
@@ -53,4 +66,21 @@ function authenticateToken(req, res, next) {
     });
 }
 
-module.exports = { router, authenticateToken };
+function authenticateAdmin(req, res, next) {
+    const token = req.headers['authorization'];
+    if (!token) {
+        return res.status(401).json({ message: 'Token not provided' });
+    }
+    jwt.verify(token, "gokul", (err, user) => {
+        if (err) {
+            return res.status(403).json({ message: 'Inavalid token' });
+        }
+        if (user.role !== "admin") {
+            return res.status(403).json({ message: 'Unauthorized' });
+        }
+        req.user = user;
+        next();
+    })
+}
+
+module.exports = { router, authenticateToken, authenticateAdmin };
