@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const app = express();
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 
 app.use(express.json());
 app.use(cors());
